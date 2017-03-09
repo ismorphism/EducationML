@@ -12,24 +12,37 @@ def unpickle(file):
 
 data = unpickle("cifar-10-batches-py/data_batch_1")
 label_names = unpickle("cifar-10-batches-py/batches.meta")
-print(data.keys())
-print(label_names['label_names'])
 dict = label_names['label_names']
 X = data['data'][0, :]
 y = np.zeros((10,))
 y[data['labels'][0]] = 1
 
-clf = ml.LinearClassifier(y, X)
-plt.ion()
+data_test = unpickle("cifar-10-batches-py/test_batch")
 
-for i in range(10000):
-    X = data['data'][i, :]
+X_train = np.zeros((1, len(X)))
+y_train = np.zeros(np.shape(y))
+
+clf = ml.LinearClassifier(X_train, y_train)
+
+for i in range(2000):
+    X = np.matrix(data['data'][i, :])
+    X = (X - np.mean(X))/np.max(X)
+    X_train = np.r_[X_train, X]
     y = np.zeros((10,))
     y[data['labels'][i]] = 1
-    clf.train(X, y)
+    y_train = np.c_[y_train, y]
+
+H = X_train[1:, :]
+h = y_train[:, 1:]
+
+
+clf.train(H, h)
+
+
+# clf.train(X_train, y_train)
     # print(i)
-    number = clf.output.index(1)
-    print(dict[number])
+    # number = clf.output.index(1)
+    # print(dict[clf.outputs.index(1)])
     # img = Image.fromarray(X.reshape((32, 32, 3)), 'RGB')
     # img.save('my.png')
     # img.show()
@@ -37,18 +50,17 @@ for i in range(10000):
     # plt.show()
     # plt.pause(2)
 
-print(clf.weigths)
 
 total_err = 0
-for i in range(100, 200):
-    y = np.zeros((10,))
-    y[data['labels'][i]] = 1
-    X_test = data['data'][i, :]
-    pred = clf.predict(X_test)
+for i in range(1, 31):
+    X_test = np.matrix(data_test['data'][i, :])
+    pred = clf.predict(X_test).flatten()
     try:
-        pred_number = pred.index(1)
-        print('True is ', dict[data['labels'][i]], 'Prediction is ', dict[pred_number])
+        print('True is ', dict[data_test['labels'][i]], 'Prediction is ', dict[pred.tolist()[0].index(1)])
+        if dict[data_test['labels'][i]] != dict[pred.tolist()[0].index(1)]:
+            total_err += 1
     except ValueError:
+        total_err += 1
         pass
-    total_err += sum([abs(i) for i in (clf.predict(X_test) - y)])
+
 print(total_err)

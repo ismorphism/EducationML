@@ -6,47 +6,63 @@ from decimal import *
 # getcontext().prec = 25
 
 def sigm(X, k=1000):
-    y = [float((1/(1 + exp(-k*i)))) for i in X]
-    return y
+    n = np.shape(X)[0]
+    m = np.shape(X)[1]
+    A = np.zeros((n,m))
+    for i in range(n):
+        for j in range(m):
+            A[i][j] = 1/(1 + exp(-k*X[i, j]))
+            # A[i][j] = ( 1 / (1 + exp(-k * X[i, j])) - 0.5)*2
+    return np.matrix(A)
+
+def err_sum_col(X):
+    n = np.shape(X)[0]
+    A = np.zeros((n, 1))
+    for i in range(n):
+        A[i] = sum(np.array(X[i,:])[0])
+    return A
+
+def cross_entropy(Y_pred, Y_true):
+    n = np.shape(Y_pred)[0]
+    m = np.shape(Y_pred)[1]
+    A = np.zeros((n,m))
+    for i in range(n):
+        for j in range(m):
+            # A[i][j] = -Y_true[i, j]*np.log(Y_pred[i, j]) - (1 - Y_true[i, j])*np.log(1 - Y_pred[i, j])
+            A[i][j] = np.log(1 + exp(-1*Y_true[i, j]*Y_pred[i, j]))
+    return np.matrix(A)
 
 
 class LinearClassifier:
 
-    def __init__(self, y, X):
-        self.weigths = np.zeros((len(y), len(X)))
-        self.error = []
+    def __init__(self, X, y):
+        self.weigths = np.zeros((len(y), np.shape(X)[1]))
 
     def train(self, X, y):
-        y_t = np.dot(X, np.transpose(self.weigths))
+        y_t = np.matmul(self.weigths, np.transpose(X))
         y_t = sigm(y_t)
-        self.error.append((y - y_t))
-        alpha = 0.1
+        err = (y - y_t)
+        # err = cross_entropy(y_t, y)
+        alpha = 0.001
         i = 0
-        while sum([abs(j) for j in self.error[i]]) > 0:
-            # print(self.error[i])
+        while i < 250:
             i += 1
-            for j in range(len(y)):
-                self.weigths[j, :] += alpha*2*np.dot(sum([i[j] for i in self.error]), X)
-            y_t = np.dot(X, np.transpose(self.weigths))
+            k = np.matmul(np.matrix(err), np.matrix(X))
+            self.weigths += alpha*k
+            y_t = np.matmul(self.weigths, np.transpose(X))
             y_t = sigm(y_t)
-            self.error.append((y - y_t))
-        # print(y_t, ' ', [sum(j) for j in self.error])
-        self.output = y_t
-        self.error = []
-        x = np.arange(0, i + 1, 1)
-        g = np.asarray(self.error)
-
-        # plt.setp(plt.plot(x, np.asarray([sum(j) for j in self.error])), color='b', linewidth=3.0)
-        # plt.show()
+            err = (y - y_t)
+            # err = cross_entropy(y_t, y)
+        print(y_t)
+        self.outputs = y_t
 
     def show(self):
         print(self.weigths)
 
     def predict(self, X_test):
-        y_p = np.dot(X_test, np.transpose(self.weigths))
+        y_p = np.matmul(self.weigths, np.transpose(X_test))
         y_p = sigm(y_p)
-        # print('Prediction is ', y_p)
         return y_p
 
-# print(sigm([10, 50, 5, 65, 99], 1))
-# print(np.shape(np.matrix([1,2,3]))[1])
+
+print(cross_entropy(np.matrix([1, 1, 1]), np.matrix([-1, 1, -1])))
